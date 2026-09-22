@@ -3,18 +3,39 @@
 A subscription platform that combines golf score tracking, a monthly prize draw and charity giving.
 Built for the Digital Heroes PRD (Level 1).
 
+**Live demo:** https://digital-heroes-chi-teal.vercel.app/
+Test credentials are in the [Test credentials](#test-credentials-created-by-npm-run-seed) section below.
+
+## Screens
+
+### Log in
+Existing subscribers sign back in to manage their scores and see their draws.
+![Log in](docs/screenshots/login.png)
+
+### Create an account
+New users pick their charity and a share of their fee (10% to 50%) before choosing a plan.
+![Create your account](docs/screenshots/signup.png)
+
+### How the draw works
+Explains the ticket, the draw, and where the prize pool comes from, with a worked example.
+![How the draw works](docs/screenshots/how-it-works.png)
+
+### Dashboard: scores
+Subscribers add and manage their five most recent Stableford scores, newest first.
+![Dashboard — scores](docs/screenshots/dashboard-scores.png)
+
 **Stack:** Next.js 14 (App Router) + TypeScript, Tailwind, Framer Motion, Supabase (Postgres, Auth, Storage), Razorpay, Vercel.
 
 ## Quick start
 
 1. **Install:** `npm install`
 2. **Supabase** (use a *new* project, as the PRD requires)
-   - SQL Editor: run `supabase/schema.sql`, then `supabase/policies.sql`.
+   - SQL Editor: run `supabase/schema.sql`, then `supabase/policies.sql`. If a later step fails with `permission denied for table ...`, also run `supabase/grants.sql` — some projects don't get the standard table grants set automatically.
    - Authentication > Providers > Email: turn **off** "Confirm email" so signups work instantly in the demo.
    - Project Settings > API: copy the URL, anon key and service-role key.
 3. **Razorpay** (Test mode keys)
    - Dashboard > Account & Settings > API keys: generate a key pair.
-   - Put the keys in `.env.local` (copy `.env.example`). Checkout uses Razorpay Orders, so there are no plan IDs to create.
+   - Copy `.env.example` to `.env` and fill in the keys. Both `npm run dev` and `npm run seed` read from this file. Checkout uses Razorpay Orders, so there are no plan IDs to create.
 4. **Seed demo data:** `npm run seed`
 5. **Run:** `npm run dev` and open http://localhost:3000
 
@@ -26,7 +47,7 @@ Built for the Digital Heroes PRD (Level 1).
 | Subscriber (active, 5 scores) | user@digitalheroes.test | User@12345 |
 | 24 demo players | player1@digitalheroes.test ... player24@ | Player@12345 |
 
-Seeded subscribers have an active plan but no Razorpay subscription. To test real checkout, sign up with a new email and pay with Razorpay's test card.
+Seeded subscribers have an active plan but no Razorpay order recorded. To test real checkout, sign up with a new email and pay with Razorpay's test card.
 
 ## Deploying to Vercel
 
@@ -60,26 +81,3 @@ These are the interpretations this build uses:
 - **Charity totals in reports:** estimated from active subscriptions and each user's percentage, plus recorded donations.
 
 ## Project map
-
-```
-supabase/          schema.sql, policies.sql (tables, constraints, row level security)
-scripts/           seed.ts (demo data)
-src/
-  middleware.ts    session refresh + route protection
-  lib/draw/        generate, match, prizes: pure functions, unit tested
-  lib/             config (all business rules), scores, subscription, charity, auth
-  lib/supabase/    browser, server (user session), admin (service role) clients
-  app/             pages, server actions (app/actions, app/admin/actions.ts), API routes
-  app/api/         razorpay (create, verify, webhook), donations
-  components/      UI, home, dashboard, admin
-  tests/           scores, draw, prizes
-```
-
-## Tests
-
-`npm test` runs the score window rules, draw generation, matching, prize split and rollover.
-`npm run typecheck` runs the TypeScript compiler.
-
-## PRD checklist
-
-User signup and login, monthly and yearly subscription, five-score rolling logic, draw simulation and publish, charity selection and contribution, winner verification and payout tracking, user dashboard (all five modules), admin panel (users, draws, charities, winners, reports), responsive layout, and error and empty states are all implemented.
