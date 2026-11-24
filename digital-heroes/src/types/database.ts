@@ -109,3 +109,19 @@ export interface LedgerEntry {
   entry_hash: string;
   created_at: string;
 }
+
+export interface EncryptedDonationRecord {
+  id: string;
+  contribution_id: string;
+  ciphertext: string;
+  nonce: string;
+  created_at: string;
+}
+
+export interface DonationSearchIndexEntry {
+  id: string;
+  token: string;
+  contribution_id: string;
+  created_at: string;
+}
+

@@ -6,6 +6,7 @@ import { getRazorpay } from "@/lib/razorpay";
 import { addPeriod, getSubscription } from "@/lib/subscription";
 import { calculatePaymentCharityShare } from "@/lib/charity";
 import { recordContributionAndLedger } from "@/lib/ledger";
+import { recordEncryptedDonorEntry } from "@/lib/encryption";
 
 /**
  * Step 2 of checkout: verify Razorpay's signature, record the charity contribution
@@ -47,7 +48,7 @@ export async function POST(req: Request) {
   // Load the user's selected charity and allocation percent
   const { data: profile } = await adminClient
     .from("profiles")
-    .select("charity_id, charity_percent")
+    .select("full_name, charity_id, charity_percent")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -66,6 +67,13 @@ export async function POST(req: Request) {
     if (!ledgerResult.ok && !ledgerResult.alreadyProcessed) {
       console.error("Ledger recording failed:", ledgerResult.error);
       return NextResponse.json({ error: "Could not record charity contribution." }, { status: 500 });
+    }
+
+    if (ledgerResult.contributionId && !ledgerResult.alreadyProcessed) {
+      await recordEncryptedDonorEntry(adminClient, ledgerResult.contributionId, {
+        fullName: profile.full_name || "",
+        email: user.email || "",
+      });
     }
   }
 

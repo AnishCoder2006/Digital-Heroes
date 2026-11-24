@@ -29,12 +29,14 @@ vi.mock("@/lib/supabase/admin", () => ({
           }),
         };
       }
-      if (table === "subscriptions") {
+      if (table === "subscriptions" || table === "donation_records_enc" || table === "donation_search_index") {
         return {
           upsert: mockAdminUpsert,
         };
       }
-      return {};
+      return {
+        upsert: mockAdminUpsert,
+      };
     },
   })),
 }));
