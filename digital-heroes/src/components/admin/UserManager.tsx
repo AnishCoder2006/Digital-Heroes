@@ -6,12 +6,13 @@ import { adminDeleteScore, adminSaveScore, updateUser } from "@/app/admin/action
 import { Notice, NumberBall, StatusPill } from "@/components/ui";
 import { MAX_CHARITY_PERCENT, MIN_CHARITY_PERCENT, SCORE_MAX, SCORE_MIN } from "@/lib/config";
 import { cn, formatDate, type ActionResult } from "@/lib/utils";
+import type { Role } from "@/types/database";
 
 export type UserRow = {
   id: string;
   name: string;
   email: string;
-  role: "subscriber" | "admin";
+  role: Role;
   charityName: string;
   charityPercent: number;
   sub: { plan: "monthly" | "yearly"; status: string; renewal: string | null } | null;
