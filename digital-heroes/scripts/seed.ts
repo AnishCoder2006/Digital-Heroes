@@ -6,6 +6,9 @@
  * subscriptions and five scores each (so a draw has real winners).
  */
 import { createClient } from "@supabase/supabase-js";
+import { recordContributionAndLedger } from "@/lib/ledger";
+import { calculatePaymentCharityShare } from "@/lib/charity";
+import { recordEncryptedDonorEntry } from "@/lib/encryption";
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -32,6 +35,7 @@ const supabase = createClient(url, serviceKey, {
 });
 
 const ADMIN = { email: "admin@digitalheroes.test", password: "Admin@12345", name: "Admin" };
+const AUDITOR = { email: "auditor@digitalheroes.test", password: "Auditor@12345", name: "Auditor Officer" };
 const TESTER = { email: "user@digitalheroes.test", password: "User@12345", name: "Test Player" };
 
 const CHARITIES = [
@@ -113,25 +117,72 @@ async function main() {
   const adminId = await findOrCreateUser(ADMIN.email, ADMIN.password, { full_name: ADMIN.name, charity_id: pick(), charity_percent: 10 });
   await supabase.from("profiles").update({ role: "admin" }).eq("id", adminId);
 
+  // Auditor (Workstream 3 auditor role)
+  const auditorId = await findOrCreateUser(AUDITOR.email, AUDITOR.password, { full_name: AUDITOR.name, charity_id: pick(), charity_percent: 10 });
+  await supabase.from("profiles").update({ role: "auditor" }).eq("id", auditorId);
+
   // Test subscriber (active, five scores)
-  const testerId = await findOrCreateUser(TESTER.email, TESTER.password, { full_name: TESTER.name, charity_id: pick(), charity_percent: 15 });
+  const testerCharityId = pick();
+  const testerId = await findOrCreateUser(TESTER.email, TESTER.password, { full_name: TESTER.name, charity_id: testerCharityId, charity_percent: 15 });
   await giveSubscription(testerId, "monthly");
   await giveScores(testerId, 24, 38);
 
+  const seededSubscribers: { id: string; email: string; name: string; charityId: string; charityPercent: number; plan: "monthly" | "yearly" }[] = [
+    { id: testerId, email: TESTER.email, name: TESTER.name, charityId: testerCharityId, charityPercent: 15, plan: "monthly" },
+  ];
+
   // Demo players with scores in the typical 20-40 range so a draw can produce winners
   for (let i = 1; i <= 24; i++) {
-    const id = await findOrCreateUser(`player${i}@digitalheroes.test`, "Player@12345", {
-      full_name: `Demo Player ${i}`,
-      charity_id: pick(),
-      charity_percent: [10, 10, 15, 20, 25][i % 5],
+    const chId = pick();
+    const pct = [10, 10, 15, 20, 25][i % 5];
+    const plan = i % 4 === 0 ? "yearly" : "monthly";
+    const name = `Demo Player ${i}`;
+    const email = `player${i}@digitalheroes.test`;
+
+    const id = await findOrCreateUser(email, "Player@12345", {
+      full_name: name,
+      charity_id: chId,
+      charity_percent: pct,
     });
-    await giveSubscription(id, i % 4 === 0 ? "yearly" : "monthly");
+    await giveSubscription(id, plan);
     await giveScores(id, 20, 40);
+
+    seededSubscribers.push({ id, email, name, charityId: chId, charityPercent: pct, plan });
+  }
+
+  // Seed sample contributions, ledger entries, and searchable encrypted records
+  console.log("Seeding contributions, hash-linked ledger, and encrypted search records...");
+  const { count: contribCount } = await supabase.from("charity_contributions").select("id", { count: "exact", head: true });
+  if (!contribCount || contribCount === 0) {
+    for (let i = 0; i < Math.min(seededSubscribers.length, 10); i++) {
+      const sub = seededSubscribers[i];
+      const amount = calculatePaymentCharityShare(sub.plan, sub.charityPercent);
+      const paymentId = `pay_seed_${Date.now()}_${i + 1}`;
+      const orderId = `order_seed_${i + 1}`;
+
+      const res = await recordContributionAndLedger(supabase, {
+        paymentId,
+        orderId,
+        charityId: sub.charityId,
+        userId: sub.id,
+        amount,
+      });
+
+      if (res.ok && res.contributionId) {
+        await recordEncryptedDonorEntry(supabase, res.contributionId, {
+          fullName: sub.name,
+          email: sub.email,
+        });
+      }
+    }
+    console.log("Seeded initial contributions and encrypted records.");
   }
 
   console.log("\nSeed complete.\n");
   console.log(`Admin:      ${ADMIN.email}  /  ${ADMIN.password}`);
+  console.log(`Auditor:    ${AUDITOR.email}  /  ${AUDITOR.password}`);
   console.log(`Subscriber: ${TESTER.email}  /  ${TESTER.password}\n`);
+
 }
 
 main().catch((e) => {
