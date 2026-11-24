@@ -1,7 +1,7 @@
 // Hand-written row types. You can also generate them with:
 //   npx supabase gen types typescript --project-id <id> > src/types/supabase.ts
 
-export type Role = "subscriber" | "admin";
+export type Role = "subscriber" | "admin" | "auditor";
 
 export interface CharityEvent {
   title: string;
@@ -85,5 +85,27 @@ export interface Donation {
   charity_id: string;
   amount: number;
   razorpay_payment_id: string | null;
+  created_at: string;
+}
+
+export interface CharityContribution {
+  id: string;
+  razorpay_payment_id: string;
+  razorpay_order_id: string | null;
+  charity_id: string;
+  user_id: string;
+  amount: number;
+  created_at: string;
+}
+
+export interface LedgerEntry {
+  id: string;
+  sequence_number: number;
+  contribution_id: string;
+  user_id_hash: string;
+  charity_id: string;
+  amount: number;
+  prev_hash: string;
+  entry_hash: string;
   created_at: string;
 }
