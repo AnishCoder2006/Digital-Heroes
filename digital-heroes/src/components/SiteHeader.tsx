@@ -6,8 +6,9 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Menu, X } from "lucide-react";
 import { Logo } from "./Logo";
 import { signOut } from "@/app/actions/auth";
+import type { Role } from "@/types/database";
 
-type HeaderUser = { name: string; role: "subscriber" | "admin" } | null;
+type HeaderUser = { name: string; role: Role } | null;
 
 const links = [
   { href: "/charities", label: "Charities" },
